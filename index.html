@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tottenham FC GO</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f2027">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed: ', err));
+            });
+        }
+    </script>
+</head>
+
+<body>
+
+    <!-- TELA DE LOGIN -->
+    <!-- TELA DE LOGIN -->
+    <div id="login-container" class="login-overlay">
+        <div class="login-card">
+            <img src="tottenham.png" id="loginLogo" class="login-logo" alt="Logo">
+            <h2>Bem-vindo</h2>
+            <p> Gestão Esportiva Tottenham FC GO</p>
+            <form id="loginForm" onsubmit="event.preventDefault(); fazerLogin();">
+                <input type="text" id="loginUser" placeholder="Usuário" required>
+                <input type="password" id="loginPass" placeholder="Senha" required>
+                <button type="submit">Entrar</button>
+            </form>
+            <p id="loginError" style="color: #ff6b6b; font-size: 0.9rem; margin-top: 10px; display: none;">Usuário ou
+                senha incorretos!</p>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER (HIDDEN BY DEFAULT UNTIL LOGIN) -->
+    <div class="dashboard-container" id="app-dashboard" style="display: none;">
+
+        <nav class="sidebar">
+            <h2 style="color: white; margin: 0; font-size: 1.2rem; margin-bottom: 20px;">Tottenham FC</h2>
+            <ul>
+                <li><a href="#" onclick="showView('atletas')" class="nav-link active">Atletas</a></li>
+                <li><a href="#" onclick="showView('jogos')" class="nav-link">Jogos</a></li>
+                <li><a href="#" onclick="showView('mensalista')" class="nav-link">Mensalista</a></li>
+                <li><a href="#" onclick="showView('financeiro')" class="nav-link">Financeiro</a></li>
+                <li><a href="#" onclick="showView('relatorios')" class="nav-link">Relatórios</a></li>
+                <li><a href="#" onclick="realizarLogout()" style="color: #ffcccb;">Sair</a></li>
+            </ul>
+        </nav>
+
+        <main class="content-area">
+            <!-- Content Sections (Already exist, just ensuring footer is inside main) -->
+            <!-- ... existing content ... -->
+
+
+            <!-- View: Atletas (Default) -->
+            <div id="view-atletas" class="view-section active">
+                <div class="card">
+                    <h2 id="form-title">Registar Atleta/Pagamento</h2>
+                    <input type="hidden" id="atletaId">
+
+                    <label>Nome do Atleta</label>
+                    <input type="text" id="nome" placeholder="Ex: Caio">
+
+                    <label>Telefone (WhatsApp)</label>
+                    <input type="tel" id="telefone" placeholder="Ex: 11999999999">
+
+                    <label>Posição</label>
+                    <select id="posicao">
+                        <option value="Goleiro">Goleiro</option>
+                        <option value="Zagueiro">Zagueiro</option>
+                        <option value="Lateral">Lateral</option>
+                        <option value="Volante">Volante</option>
+                        <option value="Meio-Campo">Meio-Campo</option>
+                        <option value="Atacante">Atacante</option>
+                    </select>
+
+                    <button class="btn-save" id="btnSalvar" onclick="salvarAtleta()">Salvar Registro</button>
+                    <button class="btn-backup" onclick="fazerBackup()">Baixar Backup dos Dados</button>
+                </div>
+
+                <div class="card">
+                    <h2>Lista de Atletas</h2>
+                    <div id="listaAtletas"></div>
+                </div>
+            </div> <!-- End View Atletas -->
+
+            <!-- View: Jogos -->
+            <div id="view-jogos" class="view-section">
+                <!-- Team Config Section -->
+                <div class="card">
+                    <h2>Configurações do Time</h2>
+                    <label>Nome do Time:</label>
+                    <input type="text" id="timeNome" placeholder="Ex: TOTTENHAM FC GO">
+
+                    <label>Responsável:</label>
+                    <input type="text" id="timeResponsavel" placeholder="Ex: CAIO">
+
+                    <label>Brasão do Time:</label>
+                    <input type="file" id="timeBrasao" accept="image/*">
+                    <small style="color: #666; display: block; margin-top: 5px;">* Selecione o arquivo do brasão e
+                        clique em "Salvar Configurações".</small>
+
+                    <button class="btn-save" style="background-color: #000; color: #fff; margin-top: 20px;"
+                        onclick="salvarConfiguracaoTime()">Salvar Configurações</button>
+                </div>
+
+                <!-- Add Game Form -->
+                <div class="card">
+                    <h2>Adicionar Jogo</h2>
+                    <label>Adversário:</label>
+                    <input type="text" id="jogoAdversario">
+
+                    <label>Data e Hora:</label>
+                    <input type="datetime-local" id="jogoData">
+
+                    <label>Local:</label>
+                    <input type="text" id="jogoLocal">
+
+                    <label>Valor do Jogo (R$):</label>
+                    <input type="number" id="jogoValor" step="0.01" placeholder="Ex: 250.00">
+
+                    <label>Brasão do Adversário:</label>
+                    <input type="file" id="jogoBrasaoAdversario" accept="image/*">
+
+                    <button class="btn-save" style="background-color: #000; color: #fff; margin-top: 20px;"
+                        onclick="adicionarJogo()">Adicionar Jogo</button>
+                </div>
+
+                <!-- Games List -->
+                <div id="listaJogos" class="games-grid">
+                    <!-- Cards will be rendered here -->
+                </div>
+            </div>
+
+            <!-- View: Mensalista -->
+            <div id="view-mensalista" class="view-section">
+                <div class="card">
+                    <h2>Controle de Mensalistas</h2>
+
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
+                        <label style="margin: 0;">Mês de Referência:</label>
+                        <input type="month" id="mesReferencia" style="width: auto;" onchange="carregarMensalistas()">
+                    </div>
+
+                    <div class="table-container">
+                        <table class="mensalista-table">
+                            <thead>
+                                <tr>
+                                    <th>Atleta</th>
+                                    <th style="text-align: center;">Vl. Pago (R$)</th>
+                                    <th style="text-align: center;">Dt. Pagto</th>
+                                    <th style="text-align: center;">Jogos</th>
+                                    <th style="text-align: center;">Saldo</th>
+                                    <th style="text-align: center;">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaMensalistas">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View: Financeiro -->
+            <div id="view-financeiro" class="view-section">
+                <div class="card">
+                    <h2><i class="fas fa-chart-line"></i> Controle Financeiro</h2>
+
+                    <div class="filters">
+                        <input type="month" id="mesFinanceiro" onchange="renderizarFinanceiro()">
+                    </div>
+
+                    <div class="fin-summary">
+                        <div class="fin-card income">
+                            <h3>Entradas</h3>
+                            <p id="totalEntradas">R$ 0,00</p>
+                            <small>Mensalidades</small>
+                        </div>
+                        <div class="fin-card expense">
+                            <h3>Saídas</h3>
+                            <p id="totalSaidas">R$ 0,00</p>
+                            <small>Jogos</small>
+                        </div>
+                        <div class="fin-card balance">
+                            <h3>Saldo do Mês</h3>
+                            <p id="saldoMes">R$ 0,00</p>
+                            <small>Entradas - Saídas</small>
+                        </div>
+                        <div class="fin-card total">
+                            <h3>Caixa Total</h3>
+                            <p id="saldoTotal">R$ 0,00</p>
+                            <small>Acumulado Geral</small>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h3>Detalhes</h3>
+                        <p>Selecione um mês para ver o balanço específico.</p>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- View: Relatórios -->
+            <div id="view-relatorios" class="view-section">
+                <div class="card">
+                    <h2><i class="fas fa-chart-bar"></i> Relatórios e Estatísticas</h2>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Ataque vs Defesa</h3>
+                            <div class="mini-stat">⚽ Gols Feitos: <strong id="repGolsPro">0</strong></div>
+                            <div class="mini-stat">🛡️ Gols Sofridos: <strong id="repGolsContra">0</strong></div>
+                            <div class="mini-stat">🧤 Jogos sem Sofrer Gol: <strong id="repCleanSheets">0</strong></div>
+                            <div class="mini-stat">⏳ Jogos sem Marcar: <strong id="repDrought">0</strong></div>
+                        </div>
+
+                        <div class="stat-card">
+                            <h3>Formação Tática</h3>
+                            <div class="mini-stat">Mais Usada: <strong id="repFormacao">Indefinida</strong></div>
+                        </div>
+                    </div>
+
+                    <h3 style="margin-top: 20px;">Top Artilheiros ⚽</h3>
+                    <div id="listArtilheiros" class="ranking-list"></div>
+
+                    <h3 style="margin-top: 20px;">Reis da Assistência 🎯</h3>
+                    <div id="listAssistencias" class="ranking-list"></div>
+
+                    <h3 style="margin-top: 20px;">Assiduidade (Pontualidade) 📅</h3>
+                    <div id="listAssiduidade" class="ranking-list"></div>
+
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="main-footer">
+                <p>Desenvolvido por <strong>Caio Cesar Cardoso</strong> &copy; 2026</p>
+            </footer>
+
+        </main> <!-- End Content Area -->
+    </div> <!-- End Dashboard Container -->
+
+    <!-- Modal Atletas do Jogo -->
+    <div id="modalAtletasJogo" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <h3 id="modalTitulo">Súmula do Jogo</h3>
+
+            <div class="modal-form-row">
+                <div class="form-group">
+                    <label>Gols do Adversário:</label>
+                    <input type="number" id="golsAdversario" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Formação Tática:</label>
+                    <input type="text" id="formacaoTatíca" placeholder="Ex: 4-3-3">
+                </div>
+            </div>
+
+            <div class="checklist-header">
+                <span>Atleta</span>
+                <span style="text-align: center;">Gols</span>
+                <span style="text-align: center;">Assist.</span>
+            </div>
+
+            <div id="modalListaAtletas" class="checklist-container">
+                <!-- Checkboxes generated by JS -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-whatsapp" onclick="copiarEscalacao()"
+                    style="margin-right: auto; background-color: #25d366; color: white; border: none; padding: 10px 20px; border-radius: 6px;">
+                    <i class="fab fa-whatsapp"></i> Copiar
+                </button>
+                <button class="btn-cancel" onclick="fecharModalAtletas()">Cancelar</button>
+                <button class="btn-confirm" onclick="salvarAtletasJogo()">Salvar Súmula</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

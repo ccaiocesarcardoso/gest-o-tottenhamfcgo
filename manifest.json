@@ -1,0 +1,20 @@
+{
+  "name": "Tottenham FC GO",
+  "short_name": "Tottenham GO",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f2027",
+  "theme_color": "#0f2027",
+  "icons": [
+    {
+      "src": "tottenham.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "tottenham.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
