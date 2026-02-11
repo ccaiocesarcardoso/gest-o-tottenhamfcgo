@@ -82,9 +82,19 @@ function enviarZap(nome, telefone) {
 
 function excluir(id) {
     if (confirm("Deseja mesmo excluir este registro?")) {
-        atletas = atletas.filter(a => a.id !== id);
+        // Use loose inequality (!=) to handle string/number mismatch from HTML attribute
+        atletas = atletas.filter(a => a.id != id);
         localStorage.setItem('atletas_futebol', JSON.stringify(atletas));
+
+        // Remove financial records for this athlete
+        mensalidades = mensalidades.filter(m => m.atletaId != id);
+        localStorage.setItem('registros_mensalidade', JSON.stringify(mensalidades));
+
+        // Double check for orphans
+        limparOrfaosFinanceiros();
+
         renderizar();
+        renderizarFinanceiro(); // Update financial dashboard immediately
     }
 }
 
@@ -109,6 +119,20 @@ function limpar() {
     document.getElementById('posicao').value = 'Goleiro';
     document.getElementById('form-title').innerText = "Registar Atleta";
     document.getElementById('btnSalvar').innerText = "Salvar Registro";
+}
+
+function limparOrfaosFinanceiros() {
+    // Remove registros financeiros que não tem dono (atleta excluído incorretamente no passado)
+    const totalAntes = mensalidades.length;
+    const idsExistentes = new Set(atletas.map(a => parseInt(a.id))); // IDs validos
+
+    mensalidades = mensalidades.filter(m => idsExistentes.has(parseInt(m.atletaId)));
+
+    if (mensalidades.length !== totalAntes) {
+        console.warn(`Limpeza: ${totalAntes - mensalidades.length} registros orfãos removidos.`);
+        localStorage.setItem('registros_mensalidade', JSON.stringify(mensalidades));
+        renderizarFinanceiro(); // Atualiza tela se mudou algo
+    }
 }
 
 // === LÓGICA DE MENSALISTAS ===
@@ -793,6 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderizar();
     renderizarJogos();
+    limparOrfaosFinanceiros(); // Limpa sujeira de testes anteriores ao iniciar
 });
 
 // Navigation Logic
