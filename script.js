@@ -98,19 +98,7 @@ function excluir(id) {
     }
 }
 
-function fazerBackup() {
-    const backupData = {
-        atletas: atletas,
-        mensalidades: mensalidades
-    };
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "backup_tottenham_completo.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-}
+// Função fazerBackup removida aqui pois já existe uma versão completa mais abaixo no código
 
 function limpar() {
     document.getElementById('atletaId').value = '';
@@ -146,34 +134,45 @@ function carregarMensalistas() {
 
     atletas.forEach(atleta => {
         const registroMes = mensalidades.find(m => m.atletaId == atleta.id && m.mesAno === mesReferencia) || {};
-        const saldoGeral = calcularSaldoGeral(atleta.id);
+
+        let saldoGeral = 0;
+        let isGoleiro = (atleta.posicao === 'Goleiro');
+
+        if (!isGoleiro) {
+            saldoGeral = calcularSaldoGeral(atleta.id);
+        }
 
         const tr = document.createElement('tr');
         tr.style.borderBottom = "1px solid #eee";
 
         let corSaldo = saldoGeral >= 0 ? "green" : "red";
+        if (isGoleiro) corSaldo = "blue"; // Color for Isento
 
         let valStr = registroMes.valor !== undefined ? registroMes.valor : '';
         let jogosStr = registroMes.jogos !== undefined ? registroMes.jogos : '';
         let dataStr = registroMes.dataPagto || '';
 
-        // Default: Inputs DISABLED. Actions: "Editar", "Excluir".
+        // Determine if inputs should be disabled (Goleiro is always disabled for fee)
+        let disabledAttr = isGoleiro ? 'disabled style="background-color: #f0f0f0;"' : 'disabled';
+        let valPlaceholder = isGoleiro ? 'Isento' : '0,00';
+        let saldoDisplay = isGoleiro ? 'ISENTO' : `R$ ${saldoGeral.toFixed(2)}`;
 
         tr.innerHTML = `
-            <td>${atleta.nome}</td>
+            <td>${atleta.nome} <br><small style="color:gray">${atleta.posicao}</small></td>
             <td style="text-align: center;">
-                <input type="number" step="0.01" id="valor_${atleta.id}" value="${valStr}" placeholder="0,00" disabled oninput="atualizarSaldoLive(${atleta.id})">
+                <input type="number" step="0.01" id="valor_${atleta.id}" value="${valStr}" placeholder="${valPlaceholder}" ${disabledAttr} oninput="atualizarSaldoLive(${atleta.id})">
             </td>
             <td style="text-align: center;">
-                <input type="date" id="data_${atleta.id}" value="${dataStr}" disabled>
+                <input type="date" id="data_${atleta.id}" value="${dataStr}" ${disabledAttr}>
             </td>
             <td style="text-align: center;">
-                <input type="number" id="jogos_${atleta.id}" value="${jogosStr}" placeholder="0" disabled oninput="atualizarSaldoLive(${atleta.id})">
+                <input type="number" id="jogos_${atleta.id}" value="${jogosStr}" placeholder="0" ${disabledAttr} oninput="atualizarSaldoLive(${atleta.id})">
             </td>
-            <td style="text-align: center; font-weight: bold;" class="${corSaldo}">
-                <span id="saldo_${atleta.id}">R$ ${saldoGeral.toFixed(2)}</span>
+            <td style="text-align: center; font-weight: bold; color: ${corSaldo};">
+                <span id="saldo_${atleta.id}">${saldoDisplay}</span>
             </td>
             <td style="text-align: center; white-space: nowrap;">
+                ${isGoleiro ? '<span style="font-size:0.8rem; color:#888;">N/A</span>' : `
                 <div id="actions_view_${atleta.id}" style="display: inline-block;">
                     <button onclick="habilitarEdicao(${atleta.id})" class="btn-grid-edit">Editar</button>
                     <button onclick="excluirMensalidade(${atleta.id})" class="btn-grid-del">Excluir</button>
@@ -181,6 +180,7 @@ function carregarMensalistas() {
                 <div id="actions_save_${atleta.id}" style="display: none;">
                     <button onclick="salvarMensalidade(${atleta.id})" class="btn-grid-save">Salvar</button>
                 </div>
+                `} 
             </td>
         `;
 
@@ -198,6 +198,9 @@ function habilitarEdicao(atletaId) {
 }
 
 function calcularSaldoGeral(atletaId) {
+    const atleta = atletas.find(a => a.id == atletaId);
+    if (atleta && atleta.posicao === 'Goleiro') return 0; // Goleiros são isentos, saldo sempre zerado
+
     const historico = mensalidades.filter(m => m.atletaId == atletaId);
     let totalPago = 0;
     let totalCustoJogos = 0;
@@ -857,8 +860,11 @@ function renderizarRelatorios() {
     let formacoesCount = {};
 
     jogos.forEach(jogo => {
-        const gp = jogo.golsPro || 0;
-        const gc = jogo.golsContra || 0;
+        // Skip games that don't have a result yet (e.g. not played/saved in summary)
+        if (jogo.golsPro === undefined || jogo.golsContra === undefined) return;
+
+        const gp = jogo.golsPro;
+        const gc = jogo.golsContra;
 
         totalGolsPro += gp;
         totalGolsContra += gc;
@@ -965,8 +971,78 @@ function renderizarRelatorios() {
     // Render Top Assists
     renderList('listAssistencias', [...statsArray], (i) => i.assists, (i) => `${i.assists}`);
 
-    // Render Attendance
-    renderList('listAssiduidade', [...statsArray], (i) => i.jogos, (i) => `${i.jogos}`);
+    // === 3. Pontualidade (Pagamentos) ===
+    const mesInputRel = document.getElementById('mesRelatorios');
+    if (!mesInputRel.value) {
+        const today = new Date();
+        mesInputRel.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    }
+    const mesRef = mesInputRel.value;
+
+    const containerPontualidade = document.getElementById('listPontualidade');
+    containerPontualidade.innerHTML = '';
+
+    // Sort athletes: Paid first, then by name
+    const atletasStatus = atletas.map(a => {
+        // Goleiros rule
+        let isGoleiro = (a.posicao === 'Goleiro');
+        let pagou = false; // Default for non-Goleiro
+
+        if (isGoleiro) {
+            // Goleiro is practically "Paid/Exempt"
+            // We treat as 'pagou' for sorting purposes if we want them fast in the list? 
+            // Or just distinct. Let's mark 'pagou' true so they show up green/blue.
+            pagou = true;
+        } else {
+            pagou = mensalidades.some(m => m.atletaId == a.id && m.mesAno === mesRef && parseFloat(m.valor) > 0);
+        }
+
+        return { ...a, pagou, isGoleiro };
+    });
+
+    atletasStatus.sort((a, b) => {
+        if (a.pagou === b.pagou) return a.nome.localeCompare(b.nome);
+        return a.pagou ? -1 : 1; // "Paid" (or Exempt) first
+    });
+
+    if (atletasStatus.length === 0) {
+        containerPontualidade.innerHTML = '<p style="color:#94a3b8;">Nenhum atleta cadastrado.</p>';
+    } else {
+        atletasStatus.forEach(a => {
+            const div = document.createElement('div');
+            div.className = 'ranking-item';
+
+            // Styling
+            let color = '#e74c3c'; // Red (Pendente)
+            let statusText = 'PENDENTE';
+            let icon = '<i class="fas fa-times-circle"></i>';
+
+            if (a.isGoleiro) {
+                color = '#3498db'; // Blue (Isento)
+                statusText = 'ISENTO';
+                icon = '<i class="fas fa-user-shield"></i>';
+            } else if (a.pagou) {
+                color = '#2ecc71'; // Green (Pago)
+                statusText = 'PAGO';
+                icon = '<i class="fas fa-check-circle"></i>';
+            }
+
+            div.innerHTML = `
+                <div class="ranking-info" style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="ranking-details">
+                        <span style="font-weight: bold;">${a.nome}</span>
+                        ${a.isGoleiro ? '<small style="color:#ccc; margin-left:5px;">(Goleiro)</small>' : ''}
+                    </div>
+                    <span class="value" style="color: ${color}; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;">
+                        ${icon} ${statusText}
+                    </span>
+                </div>
+            `;
+            // Add a subtle bottom border
+            div.style.borderBottom = '1px solid #eee';
+            containerPontualidade.appendChild(div);
+        });
+    }
 }
 
 function renderizarFinanceiro() {

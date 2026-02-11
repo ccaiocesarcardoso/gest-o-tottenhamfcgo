@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tottenham-go-v1';
+const CACHE_NAME = 'tottenham-go-v2'; // Alterado para v2 para forçar atualização
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -14,6 +14,21 @@ self.addEventListener('install', (event) => {
             .then((cache) => {
                 return cache.addAll(ASSETS_TO_CACHE);
             })
+    );
+});
+
+// Remove caches antigos quando uma nova versão é ativada
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cache) => {
+                    if (cache !== CACHE_NAME) {
+                        return caches.delete(cache);
+                    }
+                })
+            );
+        })
     );
 });
 

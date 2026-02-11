@@ -214,6 +214,10 @@
                 <div class="card">
                     <h2><i class="fas fa-chart-bar"></i> Relatórios e Estatísticas</h2>
 
+                    <div class="filters" style="margin-bottom: 20px;">
+                        <input type="month" id="mesRelatorios" onchange="renderizarRelatorios()">
+                    </div>
+
                     <div class="stats-grid">
                         <div class="stat-card">
                             <h3>Ataque vs Defesa</h3>
@@ -235,8 +239,8 @@
                     <h3 style="margin-top: 20px;">Reis da Assistência 🎯</h3>
                     <div id="listAssistencias" class="ranking-list"></div>
 
-                    <h3 style="margin-top: 20px;">Assiduidade (Pontualidade) 📅</h3>
-                    <div id="listAssiduidade" class="ranking-list"></div>
+                    <h3 style="margin-top: 20px;">Pontualidade (Pagamentos em Dia) 💰</h3>
+                    <div id="listPontualidade" class="ranking-list"></div>
 
                 </div>
             </div>
