@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tottenham-go-v2'; // Alterado para v2 para forçar atualização
+const CACHE_NAME = 'tottenham-go-v3'; // Alterado para v3 para forçar atualização
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
