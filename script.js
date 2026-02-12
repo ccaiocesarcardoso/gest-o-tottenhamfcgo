@@ -68,7 +68,7 @@ function editar(id) {
 }
 
 function enviarZap(nome, telefone) {
-    let msg = `Olá ${nome}, tudo bem? Aqui é do Tottenham FC GO.`;
+    let msg = `Olá ${nome}, tudo bem? Aqui é do Tottenham FC GO. Passando para informar que a mensalidade do mês de Fevereiro já está disponível para pagamento.`;
     let phoneNum = telefone ? telefone.replace(/\D/g, '') : '';
     if (phoneNum) {
         if (!phoneNum.startsWith('55') && phoneNum.length >= 10) {
@@ -599,7 +599,14 @@ function realizarLogout() {
     }
 }
 
-// === LOGIN SYSTEM ===
+// === LOGIN SYSTEM & SECURITY ===
+
+async function hashPassword(password) {
+    const msgBuffer = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 function checkLogin() {
     // Load Dynamic Logo if exists, otherwise use default Tottenham
@@ -625,18 +632,68 @@ function checkLogin() {
     }
 }
 
-function fazerLogin() {
+async function fazerLogin() {
     const user = document.getElementById('loginUser').value;
     const pass = document.getElementById('loginPass').value;
     const errorMsg = document.getElementById('loginError');
 
-    // Simple hardcoded check
-    if (user === 'admin' && pass === 'admin') {
+    // Default hash for 'admin'
+    const defaultPassHash = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
+
+    // Get stored hash or use default
+    const storedHash = localStorage.getItem('auth_pass_hash') || defaultPassHash;
+
+    const inputHash = await hashPassword(pass);
+
+    if (user === 'admin' && inputHash === storedHash) {
         localStorage.setItem('isLoggedIn', 'true');
         checkLogin();
     } else {
         errorMsg.style.display = 'block';
     }
+}
+
+// === ALTERAR SENHA ===
+
+function abrirModalSenha() {
+    document.getElementById('modalAlterarSenha').style.display = 'flex';
+}
+
+function fecharModalSenha() {
+    document.getElementById('modalAlterarSenha').style.display = 'none';
+    document.getElementById('senhaAtual').value = '';
+    document.getElementById('novaSenha').value = '';
+    document.getElementById('confirmaSenha').value = '';
+}
+
+async function salvarNovaSenha() {
+    const senhaAtual = document.getElementById('senhaAtual').value;
+    const novaSenha = document.getElementById('novaSenha').value;
+    const confirmaSenha = document.getElementById('confirmaSenha').value;
+
+    if (!senhaAtual || !novaSenha || !confirmaSenha) {
+        return alert("Preencha todos os campos!");
+    }
+
+    if (novaSenha !== confirmaSenha) {
+        return alert("A nova senha e a confirmação não conferem!");
+    }
+
+    // Default hash for 'admin'
+    const defaultPassHash = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
+    const storedHash = localStorage.getItem('auth_pass_hash') || defaultPassHash;
+    const currentInputHash = await hashPassword(senhaAtual);
+
+    if (currentInputHash !== storedHash) {
+        return alert("Senha atual incorreta!");
+    }
+
+    const newHash = await hashPassword(novaSenha);
+    localStorage.setItem('auth_pass_hash', newHash);
+
+    alert("Senha alterada com sucesso! Faça login novamente.");
+    fecharModalSenha();
+    realizarLogout();
 }
 
 function realizarLogout() {
