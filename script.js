@@ -135,17 +135,17 @@ function carregarMensalistas() {
     atletas.forEach(atleta => {
         const registroMes = mensalidades.find(m => m.atletaId == atleta.id && m.mesAno === mesReferencia) || {};
 
-        let saldoGeral = 0;
+        let saldoAteMomento = 0;
         let isGoleiro = (atleta.posicao === 'Goleiro');
 
         if (!isGoleiro) {
-            saldoGeral = calcularSaldoGeral(atleta.id);
+            saldoAteMomento = calcularSaldoAteMes(atleta.id, mesReferencia);
         }
 
         const tr = document.createElement('tr');
         tr.style.borderBottom = "1px solid #eee";
 
-        let corSaldo = saldoGeral >= 0 ? "green" : "red";
+        let corSaldo = saldoAteMomento >= 0 ? "green" : "red";
         if (isGoleiro) corSaldo = "blue"; // Color for Isento
 
         let valStr = registroMes.valor !== undefined ? registroMes.valor : '';
@@ -155,7 +155,7 @@ function carregarMensalistas() {
         // Determine if inputs should be disabled (Goleiro is always disabled for fee)
         let disabledAttr = isGoleiro ? 'disabled style="background-color: #f0f0f0;"' : 'disabled';
         let valPlaceholder = isGoleiro ? 'Isento' : '0,00';
-        let saldoDisplay = isGoleiro ? 'ISENTO' : `R$ ${saldoGeral.toFixed(2)}`;
+        let saldoDisplay = isGoleiro ? 'ISENTO' : `R$ ${saldoAteMomento.toFixed(2)}`;
 
         tr.innerHTML = `
             <td>${atleta.nome} <br><small style="color:gray">${atleta.posicao}</small></td>
@@ -197,11 +197,13 @@ function habilitarEdicao(atletaId) {
     document.getElementById(`actions_save_${atletaId}`).style.display = 'inline-block';
 }
 
-function calcularSaldoGeral(atletaId) {
+function calcularSaldoAteMes(atletaId, mesLimite) {
     const atleta = atletas.find(a => a.id == atletaId);
-    if (atleta && atleta.posicao === 'Goleiro') return 0; // Goleiros são isentos, saldo sempre zerado
+    if (atleta && atleta.posicao === 'Goleiro') return 0;
 
-    const historico = mensalidades.filter(m => m.atletaId == atletaId);
+    // Filter for all transactions less than or equal to the selected month
+    const historico = mensalidades.filter(m => m.atletaId == atletaId && m.mesAno <= mesLimite);
+
     let totalPago = 0;
     let totalCustoJogos = 0;
 
@@ -213,6 +215,7 @@ function calcularSaldoGeral(atletaId) {
         totalPago += v;
         totalCustoJogos += j * 25;
     });
+
     return totalPago - totalCustoJogos;
 }
 
@@ -225,7 +228,8 @@ function atualizarSaldoLive(atletaId) {
 
     let jogosAtual = parseInt(document.getElementById(`jogos_${atletaId}`).value) || 0;
 
-    const historicoAnterior = mensalidades.filter(m => m.atletaId == atletaId && m.mesAno !== mesReferencia);
+    // Calculate balance ONLY from previous months (strictly less than current month)
+    const historicoAnterior = mensalidades.filter(m => m.atletaId == atletaId && m.mesAno < mesReferencia);
 
     let saldoAnterior = 0;
     historicoAnterior.forEach(reg => {
